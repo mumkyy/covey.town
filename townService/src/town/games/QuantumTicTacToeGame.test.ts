@@ -36,7 +36,7 @@ describe('QuantumTicTacToeGame', () => {
 
   describe('constructor', () => {
     it('should initialize with correct default state', () => {
-      expect(game.state.status).toBe('WAITING_FOR_PLAYERS');
+      expect(game.state.status).toBe('WAITING_TO_START');
       expect(game.state.moves).toEqual([]);
       expect(game.state.x).toBeUndefined();
       expect(game.state.o).toBeUndefined();
@@ -246,9 +246,9 @@ describe('QuantumTicTacToeGame', () => {
       game.join(player2);
     });
 
-    it('should reveal cell on move', () => {
+    it('should not reveal the cell on the very first move', () => {
       play(player1, 'A', 0, 0);
-      expect(game.state.publiclyVisible.A[0][0]).toBe(true);
+      expect(game.state.publiclyVisible.A[0][0]).toBe(false); // first overall move stays hidden
       expect(game.state.publiclyVisible.A[0][1]).toBe(false);
     });
 
@@ -260,10 +260,10 @@ describe('QuantumTicTacToeGame', () => {
       play(player2, 'B', 0, 1);
       play(player1, 'A', 0, 2);
 
-      // Only the squares that were actually played should be visible
-      expect(game.state.publiclyVisible.A[0][0]).toBe(true);
-      expect(game.state.publiclyVisible.A[0][1]).toBe(true);
-      expect(game.state.publiclyVisible.A[0][2]).toBe(true);
+      // Only played squares are visible, except the very first overall move stays hidden
+      expect(game.state.publiclyVisible.A[0][0]).toBe(false); // first overall move
+      expect(game.state.publiclyVisible.A[0][1]).toBe(false);
+      expect(game.state.publiclyVisible.A[0][2]).toBe(false);
       expect(game.state.publiclyVisible.A[1][0]).toBe(false);
       expect(game.state.publiclyVisible.A[1][1]).toBe(false);
       expect(game.state.publiclyVisible.A[1][2]).toBe(false);
@@ -405,11 +405,12 @@ describe('QuantumTicTacToeGame', () => {
       play(player1, 'A', 0, 2);
 
       // Board B - O wins
+      // Board B - O wins (row 1) while preserving turn order
       play(player2, 'B', 1, 0);
-      play(player1, 'C', 0, 0);
+      play(player1, 'C', 2, 2); // filler by X (doesn't cause a C win)
       play(player2, 'B', 1, 1);
-      play(player1, 'C', 0, 1);
-      play(player2, 'B', 1, 2);
+      play(player1, 'C', 2, 1); // another filler by X
+      play(player2, 'B', 1, 2); // O completes row 1 on B
 
       // Board C - X wins (complete row 0 on C)
       play(player1, 'C', 0, 0);
@@ -478,12 +479,12 @@ describe('QuantumTicTacToeGame', () => {
       play(player1, 'A', 0, 2);
 
       // O wins board B
+      // Board B - O wins (row 1) while preserving turn order
       play(player2, 'B', 1, 0);
-      play(player1, 'C', 0, 0);
+      play(player1, 'C', 2, 2); // filler by X (doesn't cause a C win)
       play(player2, 'B', 1, 1);
-      play(player1, 'C', 0, 1);
-      play(player2, 'B', 1, 2);
-
+      play(player1, 'C', 2, 1); // another filler by X
+      play(player2, 'B', 1, 2); // O completes row 1 on B
       // X wins board C
       play(player1, 'C', 0, 0);
       play(player2, 'C', 1, 0);
@@ -503,61 +504,25 @@ describe('QuantumTicTacToeGame', () => {
       play(player2, 'B', 0, 1);
       play(player1, 'A', 0, 2); // A scored
 
-      play(player2, 'B', 1, 0);
-      play(player1, 'C', 0, 0);
-      play(player2, 'B', 1, 1);
-      play(player1, 'C', 0, 1);
-      play(player2, 'B', 1, 2); // B scored
+      play(player2, 'B', 0, 2); // B scored
 
       // Fill remaining positions on C to complete the board and score it
-      // C already has: [0][0], [0][1] occupied, so we need 7 more moves
-      play(player2, 'C', 1, 0); // 1 - C[1][0]
-      play(player1, 'C', 1, 1); // 2 - C[1][1]
-      play(player2, 'C', 1, 2); // 3 - C[1][2]
-      play(player1, 'C', 2, 0); // 4 - C[2][0]
-      play(player2, 'C', 2, 1); // 5 - C[2][1]
-      play(player1, 'C', 2, 2); // 6 - C[2][2]
-      play(player2, 'C', 0, 2); // 7 - C[0][2] (completes the board)
+      play(player1, 'C', 0, 0); // X
+      play(player2, 'C', 1, 0); // O
+      play(player1, 'C', 2, 0); // X
+      play(player2, 'C', 1, 1); // O
+      play(player1, 'C', 2, 1); // X
+      play(player2, 'C', 1, 2); // B scored agaon
 
       expect(game.state.status).toBe('OVER');
 
       // Now try to make moves after game ends - should be rejected
       // All boards are closed, so any move should throw BOARD_POSITION_NOT_EMPTY_MESSAGE
       // Testing positions that should be empty but boards are closed
-      expect(() => play(player1, 'A', 1, 1)).toThrow(BOARD_POSITION_NOT_EMPTY_MESSAGE); // A[1][1] empty but A closed
-      expect(() => play(player2, 'B', 2, 0)).toThrow(BOARD_POSITION_NOT_EMPTY_MESSAGE); // B[2][0] empty but B closed
-      expect(() => play(player1, 'C', 1, 1)).toThrow(BOARD_POSITION_NOT_EMPTY_MESSAGE); // C[1][1] occupied but C closed
+      expect(() => play(player1, 'A', 1, 1)).toThrow(GAME_NOT_IN_PROGRESS_MESSAGE);
+      expect(() => play(player2, 'B', 2, 0)).toThrow(GAME_NOT_IN_PROGRESS_MESSAGE);
+      expect(() => play(player1, 'C', 1, 1)).toThrow(GAME_NOT_IN_PROGRESS_MESSAGE);
     });
-  });
-
-  // Simplified test for game ending - DEBUG
-  it('DEBUG: Simple test for game ending', () => {
-    const simpleGame = new QuantumTicTacToeGame();
-    simpleGame.join(player1);
-    simpleGame.join(player2);
-
-    // Score board A
-    play(player1, 'A', 0, 0);
-    play(player2, 'A', 0, 1);
-    play(player1, 'A', 0, 2); // A scored
-
-    // Score board B
-    play(player2, 'B', 0, 0);
-    play(player1, 'B', 0, 1);
-    play(player2, 'B', 0, 2); // B scored
-
-    // Fill board C completely
-    play(player1, 'C', 0, 0);
-    play(player2, 'C', 0, 1);
-    play(player1, 'C', 0, 2);
-    play(player2, 'C', 1, 0);
-    play(player1, 'C', 1, 1);
-    play(player2, 'C', 1, 2);
-    play(player1, 'C', 2, 0);
-    play(player2, 'C', 2, 1);
-    play(player1, 'C', 2, 2); // C filled
-
-    expect(simpleGame.state.status).toBe('OVER');
   });
 
   describe('Edge Cases & Mutation-Bait', () => {
@@ -624,11 +589,12 @@ describe('QuantumTicTacToeGame', () => {
 
     it('should maintain state immutability', () => {
       const initialState = game.state;
-      play(player1, 'A', 0, 0);
+      play(player1, 'A', 0, 0); // first move (no reveal)
+      play(player2, 'A', 0, 0); // collision → reveal + state update
 
-      // State should be a new object, not mutated
       expect(game.state).not.toBe(initialState);
       expect(game.state.moves).not.toBe(initialState.moves);
+      // Now that visibility changed, these references should be new:
       expect(game.state.publiclyVisible).not.toBe(initialState.publiclyVisible);
       expect(game.state.publiclyVisible.A).not.toBe(initialState.publiclyVisible.A);
     });

@@ -37,7 +37,7 @@ export default class QuantumTicTacToeGame extends Game<
 
   public constructor() {
     super({
-      status: 'WAITING_FOR_PLAYERS',
+      status: 'WAITING_TO_START',
       moves: [],
       xScore: 0,
       oScore: 0,
@@ -94,6 +94,7 @@ export default class QuantumTicTacToeGame extends Game<
       this._games.A.join(player);
       this._games.B.join(player);
       this._games.C.join(player);
+      this.state.status = 'IN_PROGRESS';
       this._next = 'X';
     } else {
       throw new InvalidParametersError(GAME_FULL_MESSAGE);
@@ -200,20 +201,21 @@ export default class QuantumTicTacToeGame extends Game<
 
   public applyMove(move: GameMove<QuantumTicTacToeMove>): void {
     // Allow moves if the game is in progress or waiting to start (with both players)
-    if (this.state.status !== 'IN_PROGRESS' && this.state.status !== 'WAITING_TO_START') {
+    if (this.state.status !== 'IN_PROGRESS') {
       throw new InvalidParametersError(GAME_NOT_IN_PROGRESS_MESSAGE);
-    }
-
-    // If waiting to start, automatically transition to in progress
-    if (this.state.status === 'WAITING_TO_START' && this.state.x && this.state.o) {
-      this.state = { ...this.state, status: 'IN_PROGRESS' };
-      this._next = 'X';
     }
 
     this._validateMove(move);
 
     const { board, row, col } = move.move;
 
+    const prior = this.state.moves.find(m => m.board === board && m.row === row && m.col === col);
+    if (prior) {
+      const priorPlayerID = prior.gamePiece === 'X' ? this.state.x : this.state.o;
+      if (priorPlayerID === move.playerID) {
+        throw new InvalidParametersError(BOARD_POSITION_NOT_EMPTY_MESSAGE);
+      }
+    }
     // 1) Collision: if this square on this board was already played before
     const alreadyPlayed = this.state.moves.some(
       m => m.board === board && m.row === row && m.col === col,
@@ -244,16 +246,13 @@ export default class QuantumTicTacToeGame extends Game<
       move: { gamePiece, row, col },
     });
 
-    // 3) Mirror into meta-state: append move + reveal just this cell
-    const pvBoard2 = this.state.publiclyVisible[board].map(r => r.slice());
-    pvBoard2[row][col] = true;
+    // push a normalized move that uses the derived piece
     this.state = {
       ...this.state,
-      moves: [...this.state.moves, move.move],
-      publiclyVisible: {
-        ...this.state.publiclyVisible,
-        [board]: pvBoard2,
-      } as const,
+      moves: [
+        ...this.state.moves,
+        { board, row, col, gamePiece }, // <-- IMPORTANT: store derived piece
+      ],
     };
 
     this._next = this._next === 'X' ? 'O' : 'X';
@@ -270,21 +269,15 @@ export default class QuantumTicTacToeGame extends Game<
   private _checkForWins(): void {
     (['A', 'B', 'C'] as const).forEach(boardKey => {
       const sub = this._games[boardKey];
-
-      // Only act the first time this board finishes
       if (this._scored[boardKey]) return;
       if (sub.state.status !== 'OVER') return;
 
-      this._scored[boardKey] = true;
-      // Award a point if there's a winner
+      this._scored[boardKey] = true; // mark closed for win OR draw
       if (sub.state.winner) {
-        if (sub.state.winner === this.state.x) {
-          this._xScore += 1;
-        } else if (sub.state.winner === this.state.o) {
-          this._oScore += 1;
-        }
+        if (sub.state.winner === this.state.x) this._xScore += 1;
+        else if (sub.state.winner === this.state.o) this._oScore += 1;
+        this.state = { ...this.state, xScore: this._xScore, oScore: this._oScore };
       }
-      this.state = { ...this.state, xScore: this._xScore, oScore: this._oScore };
     });
   }
 
