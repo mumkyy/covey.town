@@ -127,7 +127,8 @@ export default function QuantumTicTacToeArea({
             setJoiningGame(false);
           }}
           isLoading={joiningGame}
-          disabled={joiningGame}>
+          disabled={joiningGame}
+        >
           Join New Game
         </Button>
       );

@@ -124,8 +124,64 @@ export default class QuantumTicTacToeAreaController extends GameAreaController<
   }
 
   protected _updateFrom(newModel: GameArea<QuantumTicTacToeGameState>): void {
+    const wasOurTurn = this.whoseTurn?.id === this._townController.ourPlayer.id;
     super._updateFrom(newModel);
-    // TODO: implement the rest of this
+    const newState = newModel.game;
+    if (newState) {
+      const newBoards: { A: TicTacToeCell[][]; B: TicTacToeCell[][]; C: TicTacToeCell[][] } = {
+        A: [
+          [undefined, undefined, undefined],
+          [undefined, undefined, undefined],
+          [undefined, undefined, undefined],
+        ],
+        B: [
+          [undefined, undefined, undefined],
+          [undefined, undefined, undefined],
+          [undefined, undefined, undefined],
+        ],
+        C: [
+          [undefined, undefined, undefined],
+          [undefined, undefined, undefined],
+          [undefined, undefined, undefined],
+        ],
+      };
+
+      // Process moves in order to handle collisions correctly
+      const moveMap = new Map<string, QuantumTicTacToeMove>();
+      newState.state.moves.forEach(move => {
+        const key = `${move.board}-${move.row}-${move.col}`;
+        // Keep the first move on each square (collision rule)
+        if (!moveMap.has(key)) {
+          moveMap.set(key, move);
+        }
+      });
+
+      // Apply moves to boards based on public visibility
+      moveMap.forEach(move => {
+        const isOurMove = move.gamePiece === this.gamePiece;
+        const isPubliclyVisible = newState.state.publiclyVisible[move.board][move.row][move.col];
+
+        // Show move if it's our move (always visible) or if it's publicly visible
+        if (isOurMove || isPubliclyVisible) {
+          newBoards[move.board][move.row][move.col] = move.gamePiece;
+        }
+      });
+
+      if (
+        !_.isEqual(newBoards.A, this._boards.A) ||
+        !_.isEqual(newBoards.B, this._boards.B) ||
+        !_.isEqual(newBoards.C, this._boards.C)
+      ) {
+        this._boards = newBoards;
+        this.emit('boardChanged', this._boards);
+      }
+
+      // Check for turn change after updating the model
+      const isOurTurn = this.whoseTurn?.id === this._townController.ourPlayer.id;
+      if (wasOurTurn !== isOurTurn) {
+        this.emit('turnChanged', isOurTurn);
+      }
+    }
   }
 
   public async makeMove(

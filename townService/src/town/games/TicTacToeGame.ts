@@ -113,6 +113,30 @@ export default class TicTacToeGame extends Game<TicTacToeGameState, TicTacToeMov
     this._checkForGameEnding();
   }
 
+  /**
+   * Applies a move without validating turns - used by parent games that manage turn order
+   */
+  public applyMoveWithoutTurnValidation(move: GameMove<TicTacToeMove>): void {
+    let gamePiece: 'X' | 'O';
+    if (move.playerID === this.state.x) {
+      gamePiece = 'X';
+    } else {
+      gamePiece = 'O';
+    }
+    const cleanMove = {
+      gamePiece,
+      col: move.move.col,
+      row: move.move.row,
+    };
+    // Only validate that the space is empty, not turn order
+    for (const m of this.state.moves) {
+      if (m.col === cleanMove.col && m.row === cleanMove.row) {
+        throw new InvalidParametersError(BOARD_POSITION_NOT_EMPTY_MESSAGE);
+      }
+    }
+    this._applyMove(cleanMove);
+  }
+
   /*
    * Applies a player's move to the game.
    * Uses the player's ID to determine which game piece they are using (ignores move.gamePiece)
