@@ -13,7 +13,12 @@ import InvalidParametersError, {
   MOVE_NOT_YOUR_TURN_MESSAGE,
   PLAYER_ALREADY_IN_GAME_MESSAGE,
   PLAYER_NOT_IN_GAME_MESSAGE,
+  INVALID_MOVE_MESSAGE,
+  GAME_OVER_MESSAGE,
+  BOARD_POSITION_NOT_VALID_MESSAGE,
+  GAME_ID_MISSMATCH_MESSAGE,
 } from '../../lib/InvalidParametersError';
+
 /**
  * A QuantumTicTacToeGame is a Game that implements the rules of the Tic-Tac-Toe variant described at https://www.smbc-comics.com/comic/tic.
  * This class acts as a controller for three underlying TicTacToeGame instances, orchestrating the "quantum" rules by taking
@@ -181,18 +186,33 @@ export default class QuantumTicTacToeGame extends Game<
       throw new InvalidParametersError(PLAYER_NOT_IN_GAME_MESSAGE);
     }
 
+    if (move.gameID !== this.id) {
+      throw new InvalidParametersError(GAME_ID_MISSMATCH_MESSAGE);
+    }
+
+    if (this.state.status === 'OVER') {
+      throw new InvalidParametersError(GAME_OVER_MESSAGE);
+    }
+
     // Meta-game must be in progress or waiting to start (with both players)
     if (this.state.status !== 'IN_PROGRESS') {
       throw new InvalidParametersError(GAME_NOT_IN_PROGRESS_MESSAGE);
     }
 
+    const { board, row, col } = move.move;
     // Board must not be closed/scored already
     if (this._scored[move.move.board]) {
       // Treat closed board like "can't play here anymore"
-      throw new InvalidParametersError(BOARD_POSITION_NOT_EMPTY_MESSAGE);
+      throw new InvalidParametersError(INVALID_MOVE_MESSAGE);
     }
 
-    const { board, row, col } = move.move;
+    const validBoard = board === 'A' || board === 'B' || board === 'C';
+    const ints = Number.isInteger(row) && Number.isInteger(col);
+    const inBounds = row >= 0 && row < 3 && col >= 0 && col < 3;
+    if (!ints || !inBounds || !validBoard) {
+      throw new InvalidParametersError(BOARD_POSITION_NOT_VALID_MESSAGE);
+    }
+
     if (this.state.publiclyVisible[board][row][col]) {
       throw new InvalidParametersError(BOARD_POSITION_NOT_EMPTY_MESSAGE);
     }
@@ -205,39 +225,39 @@ export default class QuantumTicTacToeGame extends Game<
   }
 
   public applyMove(move: GameMove<QuantumTicTacToeMove>): void {
-    // Allow moves if the game is in progress or waiting to start (with both players)
-    if (this.state.status !== 'IN_PROGRESS') {
-      throw new InvalidParametersError(GAME_NOT_IN_PROGRESS_MESSAGE);
-    }
-
     this._validateMove(move);
 
     const { board, row, col } = move.move;
 
-    const prior = this.state.moves.find(m => m.board === board && m.row === row && m.col === col);
-    if (prior) {
-      const priorPlayerID = prior.gamePiece === 'X' ? this.state.x : this.state.o;
-      if (priorPlayerID === move.playerID) {
-        throw new InvalidParametersError(BOARD_POSITION_NOT_EMPTY_MESSAGE);
-      }
-    }
     // 1) Collision: if this square on this board was already played before
     const alreadyPlayed = this.state.moves.some(
       m => m.board === board && m.row === row && m.col === col,
     );
     if (alreadyPlayed) {
-      // Reveal that square publicly, do NOT add a move, do NOT touch subgame
-      const pvBoard = this.state.publiclyVisible[board].map(r => r.slice());
-      pvBoard[row][col] = true;
-      this.state = {
-        ...this.state,
-        publiclyVisible: {
-          ...this.state.publiclyVisible,
-          [board]: pvBoard,
-        } as const,
-      };
-      this._next = this._next === 'X' ? 'O' : 'X'; // lose turn
-      return;
+      // Check if the same player is trying to play on a square they already played
+      const previousMove = this.state.moves.find(
+        m => m.board === board && m.row === row && m.col === col,
+      );
+      if (
+        previousMove &&
+        ((previousMove.gamePiece === 'X' && move.playerID === this.state.x) ||
+          (previousMove.gamePiece === 'O' && move.playerID === this.state.o))
+      ) {
+        throw new InvalidParametersError(INVALID_MOVE_MESSAGE);
+      } else {
+        // Reveal that square publicly, do NOT add a move, do NOT touch subgame
+        const pvBoard = this.state.publiclyVisible[board].map(r => r.slice());
+        pvBoard[row][col] = true;
+        this.state = {
+          ...this.state,
+          publiclyVisible: {
+            ...this.state.publiclyVisible,
+            [board]: pvBoard,
+          } as const,
+        };
+        this._next = this._next === 'X' ? 'O' : 'X'; // lose turn
+        return;
+      }
     }
 
     // 2) Normal move: route to subgame (bypass per-board turn check)
