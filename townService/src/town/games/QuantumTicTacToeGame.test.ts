@@ -607,6 +607,7 @@ describe('QuantumTicTacToeGame', () => {
       game.leave(player1);
       expect(game.state.status).toBe('OVER');
       expect(game.state.winner).toBe(player2.id);
+
     });
   });
 });

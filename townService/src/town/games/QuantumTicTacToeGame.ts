@@ -182,13 +182,18 @@ export default class QuantumTicTacToeGame extends Game<
     }
 
     // Meta-game must be in progress or waiting to start (with both players)
-    if (this.state.status !== 'IN_PROGRESS' && this.state.status !== 'WAITING_TO_START') {
+    if (this.state.status !== 'IN_PROGRESS') {
       throw new InvalidParametersError(GAME_NOT_IN_PROGRESS_MESSAGE);
     }
 
     // Board must not be closed/scored already
     if (this._scored[move.move.board]) {
       // Treat closed board like "can't play here anymore"
+      throw new InvalidParametersError(BOARD_POSITION_NOT_EMPTY_MESSAGE);
+    }
+
+    const { board, row, col } = move.move;
+    if (this.state.publiclyVisible[board][row][col]) {
       throw new InvalidParametersError(BOARD_POSITION_NOT_EMPTY_MESSAGE);
     }
 
