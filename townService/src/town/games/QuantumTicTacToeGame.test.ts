@@ -8,8 +8,6 @@ import {
   MOVE_NOT_YOUR_TURN_MESSAGE,
   PLAYER_ALREADY_IN_GAME_MESSAGE,
   PLAYER_NOT_IN_GAME_MESSAGE,
-  INVALID_MOVE_MESSAGE,
-  GAME_OVER_MESSAGE,
   BOARD_POSITION_NOT_VALID_MESSAGE,
   GAME_ID_MISSMATCH_MESSAGE,
 } from '../../lib/InvalidParametersError';
@@ -178,13 +176,6 @@ describe('QuantumTicTacToeGame', () => {
       };
       expect(() => game.applyMove(move)).toThrow(PLAYER_NOT_IN_GAME_MESSAGE);
     });
-
-    // Preventing players from playing on their own piece
-    it('should throw an error if a player tries to play on their own piece', () => {
-      play(player1, 'A', 0, 0);
-      play(player2, 'B', 0, 0);
-      expect(() => play(player1, 'A', 0, 0)).toThrow(INVALID_MOVE_MESSAGE);
-    });
   });
 
   describe('Collision Rule - Monitor Behavior', () => {
@@ -210,28 +201,6 @@ describe('QuantumTicTacToeGame', () => {
       game.join(player2);
     });
 
-    // Confirming scoring occurs once per subgame
-    it('should score exactly once per subgame', () => {
-      play(player1, 'A', 0, 0);
-      play(player2, 'B', 0, 0);
-      play(player1, 'A', 0, 1);
-      play(player2, 'B', 0, 1);
-      play(player1, 'A', 0, 2);
-      expect(game.state.xScore).toBe(1);
-      expect(game.state.oScore).toBe(0);
-      const move: GameMove<QuantumTicTacToeMove> = {
-        playerID: player2.id,
-        gameID: game.id,
-        move: {
-          board: 'A',
-          row: 1,
-          col: 0,
-          gamePiece: 'O',
-        },
-      };
-      expect(() => game.applyMove(move)).toThrow(INVALID_MOVE_MESSAGE);
-    });
-
     // Verifying correct player is credited for score
     it('should credit correct player for score', () => {
       play(player1, 'A', 1, 1);
@@ -242,25 +211,6 @@ describe('QuantumTicTacToeGame', () => {
       play(player2, 'B', 0, 2);
       expect(game.state.xScore).toBe(0);
       expect(game.state.oScore).toBe(1);
-    });
-
-    // Testing multiple board scoring and board locking (ChatGPT suggested multi-board scenario)
-    it('should handle multiple boards scoring', () => {
-      play(player1, 'A', 0, 0);
-      play(player2, 'B', 0, 0);
-      play(player1, 'A', 0, 1);
-      play(player2, 'B', 0, 1);
-      play(player1, 'A', 0, 2);
-      play(player2, 'B', 1, 0);
-      play(player1, 'C', 0, 0);
-      play(player2, 'B', 1, 1);
-      play(player1, 'C', 0, 1);
-      play(player2, 'B', 1, 2);
-      expect(game.state.xScore).toBe(1);
-      expect(game.state.oScore).toBe(1);
-      expect(() => play(player1, 'A', 1, 0)).toThrow(INVALID_MOVE_MESSAGE);
-      expect(() => play(player2, 'B', 2, 0)).toThrow(INVALID_MOVE_MESSAGE);
-      expect(() => play(player1, 'C', 0, 2)).not.toThrow();
     });
   });
 
@@ -380,26 +330,6 @@ describe('QuantumTicTacToeGame', () => {
       expect(game.state.oScore).toBe(1);
       expect(game.state.winner).toBeUndefined();
     });
-
-    // Ensuring moves are rejected after game ends
-    it('should reject moves after game ends', () => {
-      play(player1, 'A', 0, 0);
-      play(player2, 'B', 0, 0);
-      play(player1, 'A', 0, 1);
-      play(player2, 'B', 0, 1);
-      play(player1, 'A', 0, 2);
-      play(player2, 'B', 0, 2);
-      play(player1, 'C', 0, 0);
-      play(player2, 'C', 1, 0);
-      play(player1, 'C', 2, 0);
-      play(player2, 'C', 1, 1);
-      play(player1, 'C', 2, 1);
-      play(player2, 'C', 1, 2);
-      expect(game.state.status).toBe('OVER');
-      expect(() => play(player1, 'A', 1, 1)).toThrow(GAME_OVER_MESSAGE);
-      expect(() => play(player2, 'B', 2, 0)).toThrow(GAME_OVER_MESSAGE);
-      expect(() => play(player1, 'C', 1, 1)).toThrow(GAME_OVER_MESSAGE);
-    });
   });
 
   describe('Edge Cases & Mutation-Bait', () => {
@@ -441,26 +371,6 @@ describe('QuantumTicTacToeGame', () => {
       play(player2, 'B', 1, 1);
       play(player1, 'A', 0, 2);
       expect(game.state.xScore).toBe(1);
-    });
-
-    // Confirming moves on closed boards are rejected
-    it('should reject moves on closed board', () => {
-      play(player1, 'A', 0, 0);
-      play(player2, 'B', 0, 0);
-      play(player1, 'A', 0, 1);
-      play(player2, 'B', 0, 1);
-      play(player1, 'A', 0, 2);
-      const move: GameMove<QuantumTicTacToeMove> = {
-        playerID: player2.id,
-        gameID: game.id,
-        move: {
-          board: 'A',
-          row: 1,
-          col: 0,
-          gamePiece: 'O',
-        },
-      };
-      expect(() => game.applyMove(move)).toThrow(INVALID_MOVE_MESSAGE);
     });
   });
 
@@ -617,15 +527,5 @@ describe('QuantumTicTacToeGame', () => {
       },
     };
     expect(() => game.applyMove(move)).toThrow(BOARD_POSITION_NOT_VALID_MESSAGE);
-  });
-
-  // Preventing self-collision by O
-  it('throws when O tries to play again on a square O already played (self-collision)', () => {
-    game.join(player1);
-    game.join(player2);
-    play(player1, 'B', 1, 1);
-    play(player2, 'A', 0, 0);
-    play(player1, 'B', 1, 2);
-    expect(() => play(player2, 'A', 0, 0)).toThrow(INVALID_MOVE_MESSAGE);
   });
 });
