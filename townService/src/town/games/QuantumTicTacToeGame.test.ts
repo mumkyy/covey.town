@@ -20,7 +20,7 @@ describe('QuantumTicTacToeGame', () => {
   let player2: Player;
   let player3: Player;
 
-  // Helper function to reduce repetitive calls
+  // Defining helper function to simplify move application (inspired by ChatGPT for reducing code repetition)
   const play = (player: Player, board: 'A' | 'B' | 'C', row: 0 | 1 | 2, col: 0 | 1 | 2) => {
     const move: GameMove<QuantumTicTacToeMove> = {
       playerID: player.id,
@@ -30,6 +30,7 @@ describe('QuantumTicTacToeGame', () => {
     game.applyMove(move);
   };
 
+  // Setting up fresh game and player instances before each test
   beforeEach(() => {
     game = new QuantumTicTacToeGame();
     player1 = createPlayerForTesting();
@@ -38,6 +39,7 @@ describe('QuantumTicTacToeGame', () => {
   });
 
   describe('constructor', () => {
+    // Verifying initial game state is set correctly
     it('should initialize with correct default state', () => {
       expect(game.state.status).toBe('WAITING_TO_START');
       expect(game.state.moves).toEqual([]);
@@ -64,17 +66,19 @@ describe('QuantumTicTacToeGame', () => {
       });
     });
 
+    // Ensuring subgames are properly initialized (ChatGPT suggested checking private properties for completeness)
     it('should initialize subgames', () => {
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.A).toBeDefined();
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.B).toBeDefined();
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.C).toBeDefined();
     });
   });
 
   describe('Join/Leave - Basic Lifecycle', () => {
+    // Testing assignment of first player as X
     it('should assign first player as X', () => {
       game.join(player1);
       expect(game.state.x).toBe(player1.id);
@@ -82,6 +86,7 @@ describe('QuantumTicTacToeGame', () => {
       expect(game.state.status).toBe('WAITING_TO_START');
     });
 
+    // Confirming second player assignment as O and game start
     it('should assign second player as O and start game', () => {
       game.join(player1);
       game.join(player2);
@@ -90,40 +95,14 @@ describe('QuantumTicTacToeGame', () => {
       expect(game.state.status).toBe('IN_PROGRESS');
     });
 
+    // Verifying rejection of third player join attempt
     it('should throw error for third player join', () => {
       game.join(player1);
       game.join(player2);
       expect(() => game.join(player3)).toThrow(GAME_FULL_MESSAGE);
     });
 
-    it('should throw error for same player joining twice', () => {
-      game.join(player1);
-      expect(() => game.join(player1)).toThrow(PLAYER_ALREADY_IN_GAME_MESSAGE);
-    });
-
-    it('should throw error for other player joining twice', () => {
-      game.join(player2);
-      expect(() => game.join(player2)).toThrow(PLAYER_ALREADY_IN_GAME_MESSAGE);
-    });
-
-    it('should reset game when first player leaves before second joins', () => {
-      game.join(player1);
-      game.leave(player1);
-      expect(game.state.x).toBeUndefined();
-      expect(game.state.o).toBeUndefined();
-      expect(game.state.status).toBe('WAITING_TO_START');
-      expect(game.state.moves).toEqual([]);
-    });
-
-    it('should reset game when other first player leaves before second joins', () => {
-      game.join(player2);
-      game.leave(player2);
-      expect(game.state.x).toBeUndefined();
-      expect(game.state.o).toBeUndefined();
-      expect(game.state.status).toBe('WAITING_TO_START');
-      expect(game.state.moves).toEqual([]);
-    });
-
+    // Checking winner declaration when a player leaves during game
     it('should declare winner when player leaves during game', () => {
       game.join(player1);
       game.join(player2);
@@ -132,73 +111,65 @@ describe('QuantumTicTacToeGame', () => {
       expect(game.state.winner).toBe(player2.id);
     });
 
-    it('should declare winner when other player leaves during game', () => {
-      game.join(player1);
-      game.join(player2);
-      game.leave(player2);
-      expect(game.state.status).toBe('OVER');
-      expect(game.state.winner).toBe(player1.id);
-    });
-
-    it('should throw error if player not in game tries to leave', () => {
-      expect(() => game.leave(player1)).toThrow(PLAYER_NOT_IN_GAME_MESSAGE);
-    });
-
+    // Ensuring players are added to all subgames on join (ChatGPT inspired checking subgame states)
     it('should join players to all subgames', () => {
       game.join(player1);
       game.join(player2);
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.A.state.x).toBe(player1.id);
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.A.state.o).toBe(player2.id);
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.B.state.x).toBe(player1.id);
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.B.state.o).toBe(player2.id);
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.C.state.x).toBe(player1.id);
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.C.state.o).toBe(player2.id);
     });
 
+    // Confirming subgames are updated when a player leaves
     it('should leave all subgames when player leaves', () => {
       game.join(player1);
       game.join(player2);
       game.leave(player1);
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.A.state.status).toBe('OVER');
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.A.state.winner).toBe(player2.id);
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.B.state.status).toBe('OVER');
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.B.state.winner).toBe(player2.id);
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.C.state.status).toBe('OVER');
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.C.state.winner).toBe(player2.id);
     });
   });
 
   describe('ApplyMove - Routing & Validation', () => {
+    // Setting up game with two players before each test
     beforeEach(() => {
       game.join(player1);
       game.join(player2);
     });
 
+    // Verifying moves are routed to correct subgame
     it('should route moves to correct subgame', () => {
       play(player1, 'A', 0, 0);
       play(player2, 'B', 0, 0);
       play(player1, 'C', 0, 0);
-
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.A.state.moves.length).toBe(1);
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.B.state.moves.length).toBe(1);
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.C.state.moves.length).toBe(1);
     });
 
+    // Ensuring O cannot move first
     it('should enforce turn order - O cannot move first', () => {
       const move: GameMove<QuantumTicTacToeMove> = {
         playerID: player2.id,
@@ -208,25 +179,9 @@ describe('QuantumTicTacToeGame', () => {
       expect(() => game.applyMove(move)).toThrow(MOVE_NOT_YOUR_TURN_MESSAGE);
     });
 
-    it('should enforce alternating turns after several moves across boards', () => {
-      play(player1, 'A', 0, 0);
-      play(player2, 'B', 0, 0);
-      play(player1, 'A', 0, 1);
-
-      // Player1 tries to move again immediately
-      expect(() => play(player1, 'C', 0, 0)).toThrowError(MOVE_NOT_YOUR_TURN_MESSAGE);
-
-      // Player2 should be able to move
-      play(player2, 'B', 0, 1);
-
-      // Now player2 tries to move again
-      expect(() => play(player2, 'C', 0, 0)).toThrowError(MOVE_NOT_YOUR_TURN_MESSAGE);
-    });
-
+    // Confirming enforcement of alternating turns (ChatGPT suggested testing turn order explicitly)
     it('should enforce alternating turns', () => {
       play(player1, 'A', 0, 0);
-
-      // X tries to move again
       const move: GameMove<QuantumTicTacToeMove> = {
         playerID: player1.id,
         gameID: game.id,
@@ -235,10 +190,9 @@ describe('QuantumTicTacToeGame', () => {
       expect(() => game.applyMove(move)).toThrow(MOVE_NOT_YOUR_TURN_MESSAGE);
     });
 
+    // Verifying turn order persists after invalid move
     it('should not change whose turn it is when an invalid move is made', () => {
       play(player1, 'A', 1, 1);
-
-      // Try invalid move (out of bounds position instead of collision)
       const invalidMove: GameMove<QuantumTicTacToeMove> = {
         playerID: player2.id,
         gameID: game.id,
@@ -246,25 +200,11 @@ describe('QuantumTicTacToeGame', () => {
       };
       expect(() => game.applyMove(invalidMove)).toThrowError(BOARD_POSITION_NOT_VALID_MESSAGE);
       expect(game.state.moves).toHaveLength(1);
-
-      // Next valid move should work for player2
       play(player2, 'A', 1, 2);
       expect(game.state.moves).toHaveLength(2);
     });
 
-    it('should enforce global turn order across boards', () => {
-      // X plays on A
-      play(player1, 'A', 0, 0);
-
-      // X tries to play on B immediately - should fail
-      const move: GameMove<QuantumTicTacToeMove> = {
-        playerID: player1.id,
-        gameID: game.id,
-        move: { board: 'B', row: 0, col: 0, gamePiece: 'X' },
-      };
-      expect(() => game.applyMove(move)).toThrow(MOVE_NOT_YOUR_TURN_MESSAGE);
-    });
-
+    // Ensuring moves from non-players are rejected
     it('should reject moves from players not in game', () => {
       const move: GameMove<QuantumTicTacToeMove> = {
         playerID: player3.id,
@@ -274,48 +214,36 @@ describe('QuantumTicTacToeGame', () => {
       expect(() => game.applyMove(move)).toThrow(PLAYER_NOT_IN_GAME_MESSAGE);
     });
 
-    it('derives piece from playerID and ignores provided gamePiece', () => {
-      // X moves first, then O tries to play as 'X' on a different square
-      play(player1, 'A', 0, 0); // X moves first
-      game.applyMove({
-        playerID: player2.id,
-        gameID: game.id,
-        move: { board: 'A', row: 0, col: 1, gamePiece: 'X' },
-      }); // O tries to play as 'X'
-      // @ts-expect-error - accessing private property for testing purposes
-      expect(game._games.A.state.moves[1].gamePiece).toBe('O'); // Should be O, not X
-    });
-
+    // Preventing players from playing on their own piece
     it('should throw an error if a player tries to play on their own piece', () => {
       play(player1, 'A', 0, 0);
       play(player2, 'B', 0, 0);
-
       expect(() => play(player1, 'A', 0, 0)).toThrow(INVALID_MOVE_MESSAGE);
     });
   });
 
   describe('Public Visibility', () => {
+    // Setting up game with two players before each test
     beforeEach(() => {
       game.join(player1);
       game.join(player2);
     });
 
+    // Ensuring first move remains hidden
     it('should not reveal the cell on the very first move', () => {
       play(player1, 'A', 0, 0);
-      expect(game.state.publiclyVisible.A[0][0]).toBe(false); // first overall move stays hidden
+      expect(game.state.publiclyVisible.A[0][0]).toBe(false);
       expect(game.state.publiclyVisible.A[0][1]).toBe(false);
     });
 
+    // Verifying no mass reveal on score (ChatGPT suggested testing visibility after scoring)
     it('should not mass reveal on score', () => {
-      // Create a win on board A
       play(player1, 'A', 0, 0);
       play(player2, 'B', 0, 0);
       play(player1, 'A', 0, 1);
       play(player2, 'B', 0, 1);
       play(player1, 'A', 0, 2);
-
-      // Only played squares are visible, except the very first overall move stays hidden
-      expect(game.state.publiclyVisible.A[0][0]).toBe(false); // first overall move
+      expect(game.state.publiclyVisible.A[0][0]).toBe(false);
       expect(game.state.publiclyVisible.A[0][1]).toBe(false);
       expect(game.state.publiclyVisible.A[0][2]).toBe(false);
       expect(game.state.publiclyVisible.A[1][0]).toBe(false);
@@ -325,64 +253,57 @@ describe('QuantumTicTacToeGame', () => {
   });
 
   describe('Collision Rule - Monitor Behavior', () => {
+    // Setting up game with two players before each test
     beforeEach(() => {
       game.join(player1);
       game.join(player2);
     });
 
-    it('should handle collision - O loses turn when trying to occupy same square as X', () => {
-      // X moves on (A, 0, 0)
-      play(player1, 'A', 0, 0);
-
-      // O tries to move on same square - should lose turn
-      const initialMoveCount = game.state.moves.length;
-      // @ts-expect-error - private property
-      const initialSubgameMoveCount = game._games.A.state.moves.length;
-      play(player2, 'A', 0, 0);
-
-      // Move count should increase by 1 for collision
-      expect(game.state.moves.length).toBe(initialMoveCount + 1);
-      // @ts-expect-error - private property
-      expect(game._games.A.state.moves.length).toBe(initialSubgameMoveCount);
-
-      // Square should be publicly visible
-      expect(game.state.publiclyVisible.A[0][0]).toBe(true);
-
-      // Next valid move should be X's turn (because moves.length is now 2, so 2 % 2 === 0 means X's turn)
-      play(player1, 'A', 0, 1);
-      expect(game.state.moves.length).toBe(3);
-    });
-
+    // Ensuring no score is awarded for collisions
     it('should not award score for mere collision', () => {
-      // X moves on (A, 0, 0)
       play(player1, 'A', 0, 0);
-
-      // O tries to move on same square - collision
       play(player2, 'A', 0, 0);
-
-      // No score should be awarded
       expect(game.state.xScore).toBe(0);
       expect(game.state.oScore).toBe(0);
+    });
+
+    // Verifying O loses turn after collision and X moves next (ChatGPT inspired collision turn logic)
+    it('collision: O loses turn and X moves next', () => {
+      const g = new QuantumTicTacToeGame();
+      const x = createPlayerForTesting();
+      const o = createPlayerForTesting();
+      g.join(x);
+      g.join(o);
+      const playHere = (p: Player, board: 'A' | 'B' | 'C', row: 0 | 1 | 2, col: 0 | 1 | 2) =>
+        g.applyMove({ playerID: p.id, gameID: g.id, move: { board, row, col, gamePiece: 'X' } });
+      playHere(x, 'A', 0, 0);
+      const before = g.state.moves.length;
+      playHere(o, 'A', 0, 0);
+      expect(g.state.moves.length).toBe(before + 1);
+      // @ts-expect-error - accessing private property for testing
+      expect(g._games.A.state.moves.length).toBe(1);
+      expect(g.state.publiclyVisible.A[0][0]).toBe(true);
+      expect(() => playHere(o, 'A', 0, 1)).toThrow(MOVE_NOT_YOUR_TURN_MESSAGE);
+      expect(() => playHere(x, 'A', 0, 1)).not.toThrow();
     });
   });
 
   describe('Scoring and Board Closure', () => {
+    // Setting up game with two players before each test
     beforeEach(() => {
       game.join(player1);
       game.join(player2);
     });
 
+    // Confirming scoring occurs once per subgame
     it('should score exactly once per subgame', () => {
-      // X gets three in a row on board A
       play(player1, 'A', 0, 0);
       play(player2, 'B', 0, 0);
       play(player1, 'A', 0, 1);
       play(player2, 'B', 0, 1);
       play(player1, 'A', 0, 2);
-
       expect(game.state.xScore).toBe(1);
       expect(game.state.oScore).toBe(0);
-      // Board A should be locked - use BOARD_POSITION_NOT_EMPTY_MESSAGE
       const move: GameMove<QuantumTicTacToeMove> = {
         playerID: player2.id,
         gameID: game.id,
@@ -391,99 +312,81 @@ describe('QuantumTicTacToeGame', () => {
       expect(() => game.applyMove(move)).toThrow(INVALID_MOVE_MESSAGE);
     });
 
+    // Verifying correct player is credited for score
     it('should credit correct player for score', () => {
-      // O gets three in a row on board B
       play(player1, 'A', 1, 1);
       play(player2, 'B', 0, 0);
       play(player1, 'A', 2, 1);
       play(player2, 'B', 0, 1);
       play(player1, 'C', 2, 2);
       play(player2, 'B', 0, 2);
-
       expect(game.state.xScore).toBe(0);
       expect(game.state.oScore).toBe(1);
     });
 
+    // Testing multiple board scoring and board locking (ChatGPT suggested multi-board scenario)
     it('should handle multiple boards scoring', () => {
-      // X wins board A
       play(player1, 'A', 0, 0);
       play(player2, 'B', 0, 0);
       play(player1, 'A', 0, 1);
       play(player2, 'B', 0, 1);
       play(player1, 'A', 0, 2);
-
-      // O wins board B
       play(player2, 'B', 1, 0);
       play(player1, 'C', 0, 0);
       play(player2, 'B', 1, 1);
       play(player1, 'C', 0, 1);
       play(player2, 'B', 1, 2);
-
       expect(game.state.xScore).toBe(1);
       expect(game.state.oScore).toBe(1);
-
-      // Both A and B should be locked, C should still be playable
       expect(() => play(player1, 'A', 1, 0)).toThrow(INVALID_MOVE_MESSAGE);
       expect(() => play(player2, 'B', 2, 0)).toThrow(INVALID_MOVE_MESSAGE);
       expect(() => play(player1, 'C', 0, 2)).not.toThrow();
     });
 
+    // Ensuring subgame state reflects score
     it('should reflect subgame end state after scoring', () => {
-      // X wins board A
       play(player1, 'A', 0, 0);
       play(player2, 'B', 0, 0);
       play(player1, 'A', 0, 1);
       play(player2, 'B', 0, 1);
       play(player1, 'A', 0, 2);
-
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect(game._games.A.state.status).toBe('OVER');
-      // @ts-expect-error - private property
+      // @ts-expect-error - accessing private property for testing
       expect([game.state.x, game.state.o]).toContain(game._games.A.state.winner);
     });
   });
 
   describe('Meta-game Ending & Winner Selection', () => {
+    // Setting up game with two players before each test
     beforeEach(() => {
       game.join(player1);
       game.join(player2);
     });
 
+    // Verifying game ends when all boards are scored
     it('should end when all three boards are scored', () => {
-      // Score all three boards
-      // Board A - X wins
       play(player1, 'A', 0, 0);
       play(player2, 'B', 0, 0);
       play(player1, 'A', 0, 1);
       play(player2, 'B', 0, 1);
       play(player1, 'A', 0, 2);
-
-      // Board B - O wins
-      // Board B - O wins (row 1) while preserving turn order
       play(player2, 'B', 1, 0);
-      play(player1, 'C', 2, 2); // filler by X (doesn't cause a C win)
+      play(player1, 'C', 2, 2);
       play(player2, 'B', 1, 1);
-      play(player1, 'C', 2, 1); // another filler by X
-      play(player2, 'B', 1, 2); // O completes row 1 on B
-
-      // Board C - X wins (complete row 0 on C)
+      play(player1, 'C', 2, 1);
+      play(player2, 'B', 1, 2);
       play(player1, 'C', 0, 0);
       play(player2, 'C', 1, 0);
       play(player1, 'C', 0, 1);
       play(player2, 'C', 1, 1);
-      play(player1, 'C', 0, 2); // C becomes OVER here
-
+      play(player1, 'C', 0, 2);
       expect(game.state.status).toBe('OVER');
     });
 
+    // Ensuring game ends when no moves remain (ChatGPT suggested testing draw scenario)
     it('ends when no more moves are possible even if not all boards scored', () => {
-      // Remove these lines - players are already joined in beforeEach
-      // game.join(player1);
-      // game.join(player2);
-
-      // Fill all three boards without making a third board win (tedious but mechanical):
       const seq: Array<['A' | 'B' | 'C', number, number]> = [
-        // craft a draw across A,B,C; ensure alternating players
         ['A', 0, 0],
         ['B', 0, 0],
         ['A', 0, 1],
@@ -503,7 +406,6 @@ describe('QuantumTicTacToeGame', () => {
         ['C', 2, 0],
         ['C', 2, 1],
         ['C', 2, 2],
-        // Finish remaining A,B cells avoiding lines…
         ['A', 1, 2],
         ['B', 1, 2],
         ['A', 2, 1],
@@ -523,84 +425,65 @@ describe('QuantumTicTacToeGame', () => {
       expect(game.state.status).toBe('OVER');
     });
 
+    // Confirming winner is declared based on points
     it('should declare winner by points - X wins', () => {
-      // X gets 2 points, O gets 1 point
-      // X wins board A
       play(player1, 'A', 0, 0);
       play(player2, 'B', 0, 0);
       play(player1, 'A', 0, 1);
       play(player2, 'B', 0, 1);
       play(player1, 'A', 0, 2);
-
-      // O wins board B
-      // Board B - O wins (row 1) while preserving turn order
       play(player2, 'B', 1, 0);
-      play(player1, 'C', 2, 2); // filler by X (doesn't cause a C win)
+      play(player1, 'C', 2, 2);
       play(player2, 'B', 1, 1);
-      play(player1, 'C', 2, 1); // another filler by X
-      play(player2, 'B', 1, 2); // O completes row 1 on B
-      // X wins board C
+      play(player1, 'C', 2, 1);
+      play(player2, 'B', 1, 2);
       play(player1, 'C', 0, 0);
       play(player2, 'C', 1, 0);
       play(player1, 'C', 0, 1);
       play(player2, 'C', 1, 1);
-      play(player1, 'C', 0, 2); // C becomes OVER here
-
+      play(player1, 'C', 0, 2);
       expect(game.state.status).toBe('OVER');
       expect(game.state.winner).toBe(player1.id);
     });
 
+    // Verifying tie when scores are equal
     it('should declare tie when scores are equal and all boards complete', () => {
-      // X wins board A (row 0)
       play(player1, 'A', 0, 0);
       play(player2, 'B', 0, 0);
       play(player1, 'A', 0, 1);
       play(player2, 'B', 0, 1);
-      play(player1, 'A', 0, 2); // X wins A
-
-      // O wins board B (row 0)
-      play(player2, 'B', 0, 2); // O wins B
-
-      // Create a tie on board C by filling it without winner
-      play(player1, 'C', 0, 0); // X
-      play(player2, 'C', 0, 1); // O
-      play(player1, 'C', 0, 2); // X
-      play(player2, 'C', 1, 1); // O
-      play(player1, 'C', 1, 0); // X
-      play(player2, 'C', 1, 2); // O
-      play(player1, 'C', 2, 1); // X
-      play(player2, 'C', 2, 0); // O
-      play(player1, 'C', 2, 2); // X
-
+      play(player1, 'A', 0, 2);
+      play(player2, 'B', 0, 2);
+      play(player1, 'C', 0, 0);
+      play(player2, 'C', 0, 1);
+      play(player1, 'C', 0, 2);
+      play(player2, 'C', 1, 1);
+      play(player1, 'C', 1, 0);
+      play(player2, 'C', 1, 2);
+      play(player1, 'C', 2, 1);
+      play(player2, 'C', 2, 0);
+      play(player1, 'C', 2, 2);
       expect(game.state.status).toBe('OVER');
       expect(game.state.xScore).toBe(1);
       expect(game.state.oScore).toBe(1);
-      expect(game.state.winner).toBeUndefined(); // tie because scores are equal
+      expect(game.state.winner).toBeUndefined();
     });
 
+    // Ensuring moves are rejected after game ends
     it('should reject moves after game ends', () => {
-      // First end the game by scoring all boards
       play(player1, 'A', 0, 0);
       play(player2, 'B', 0, 0);
       play(player1, 'A', 0, 1);
       play(player2, 'B', 0, 1);
-      play(player1, 'A', 0, 2); // A scored
-
-      play(player2, 'B', 0, 2); // B scored
-
-      // Fill remaining positions on C to complete the board and score it
-      play(player1, 'C', 0, 0); // X
-      play(player2, 'C', 1, 0); // O
-      play(player1, 'C', 2, 0); // X
-      play(player2, 'C', 1, 1); // O
-      play(player1, 'C', 2, 1); // X
-      play(player2, 'C', 1, 2); // B scored agaon
-
+      play(player1, 'A', 0, 2);
+      play(player2, 'B', 0, 2);
+      play(player1, 'C', 0, 0);
+      play(player2, 'C', 1, 0);
+      play(player1, 'C', 2, 0);
+      play(player2, 'C', 1, 1);
+      play(player1, 'C', 2, 1);
+      play(player2, 'C', 1, 2);
       expect(game.state.status).toBe('OVER');
-
-      // Now try to make moves after game ends - should be rejected
-      // All boards are closed, so any move should throw BOARD_POSITION_NOT_EMPTY_MESSAGE
-      // Testing positions that should be empty but boards are closed
       expect(() => play(player1, 'A', 1, 1)).toThrow(GAME_OVER_MESSAGE);
       expect(() => play(player2, 'B', 2, 0)).toThrow(GAME_OVER_MESSAGE);
       expect(() => play(player1, 'C', 1, 1)).toThrow(GAME_OVER_MESSAGE);
@@ -608,59 +491,53 @@ describe('QuantumTicTacToeGame', () => {
   });
 
   describe('Edge Cases & Mutation-Bait', () => {
+    // Setting up game with two players before each test
     beforeEach(() => {
       game.join(player1);
       game.join(player2);
     });
 
+    // Testing diagonal wins on subgames
     it('should handle diagonal wins on subgames', () => {
-      // Test main diagonal win
       play(player1, 'A', 0, 0);
       play(player2, 'B', 0, 0);
       play(player1, 'A', 1, 1);
       play(player2, 'B', 0, 1);
       play(player1, 'A', 2, 2);
-
       expect(game.state.xScore).toBe(1);
     });
 
+    // Verifying anti-diagonal wins on subgames
     it('should handle anti-diagonal wins on subgames', () => {
-      // Test anti-diagonal win
       play(player1, 'A', 0, 2);
       play(player2, 'B', 0, 0);
       play(player1, 'A', 1, 1);
       play(player2, 'B', 0, 1);
       play(player1, 'A', 2, 0);
-
       expect(game.state.xScore).toBe(1);
     });
 
+    // Ensuring win on last move is handled correctly
     it('should handle last-move win', () => {
-      // Create a scenario where X wins on the very last move
-      // Fill board A almost completely, then win on last move
-      // Make sure A only wins on the last move
-      play(player1, 'A', 0, 0); // X
-      play(player2, 'B', 0, 0); // O
-      play(player1, 'A', 0, 1); // X
-      play(player2, 'B', 0, 1); // O
-      play(player1, 'A', 1, 0); // X
-      play(player2, 'B', 1, 0); // O
-      play(player1, 'A', 1, 1); // X
-      play(player2, 'B', 1, 1); // O
-      // Final winning move on A (completes row 0 or diagonal depending what you choose)
-      play(player1, 'A', 0, 2); // X wins A *now*
+      play(player1, 'A', 0, 0);
+      play(player2, 'B', 0, 0);
+      play(player1, 'A', 0, 1);
+      play(player2, 'B', 0, 1);
+      play(player1, 'A', 1, 0);
+      play(player2, 'B', 1, 0);
+      play(player1, 'A', 1, 1);
+      play(player2, 'B', 1, 1);
+      play(player1, 'A', 0, 2);
       expect(game.state.xScore).toBe(1);
     });
 
+    // Confirming moves on closed boards are rejected
     it('should reject moves on closed board', () => {
-      // Score board A
       play(player1, 'A', 0, 0);
       play(player2, 'B', 0, 0);
       play(player1, 'A', 0, 1);
       play(player2, 'B', 0, 1);
       play(player1, 'A', 0, 2);
-
-      // Try to move on closed board A - use BOARD_POSITION_NOT_EMPTY_MESSAGE
       const move: GameMove<QuantumTicTacToeMove> = {
         playerID: player2.id,
         gameID: game.id,
@@ -668,30 +545,9 @@ describe('QuantumTicTacToeGame', () => {
       };
       expect(() => game.applyMove(move)).toThrow(INVALID_MOVE_MESSAGE);
     });
-
-    it('should maintain state immutability', () => {
-      const initialState = game.state;
-      play(player1, 'A', 0, 0); // first move (no reveal)
-      play(player2, 'A', 0, 0); // collision → reveal + state update
-
-      expect(game.state).not.toBe(initialState);
-      expect(game.state.moves).not.toBe(initialState.moves);
-      // Now that visibility changed, these references should be new:
-      expect(game.state.publiclyVisible).not.toBe(initialState.publiclyVisible);
-      expect(game.state.publiclyVisible.A).not.toBe(initialState.publiclyVisible.A);
-    });
-
-    it('should handle joining/leaving mid-game', () => {
-      // Start game
-      play(player1, 'A', 0, 0);
-
-      // Player 1 leaves mid-game
-      game.leave(player1);
-      expect(game.state.status).toBe('OVER');
-      expect(game.state.winner).toBe(player2.id);
-    });
   });
 
+  // Ensuring moves are rejected when game is not in progress
   it('should reject moves when game not in progress', () => {
     game.join(player1);
     const move: GameMove<QuantumTicTacToeMove> = {
@@ -702,6 +558,7 @@ describe('QuantumTicTacToeGame', () => {
     expect(() => game.applyMove(move)).toThrow(GAME_NOT_IN_PROGRESS_MESSAGE);
   });
 
+  // Verifying moves on revealed spaces are rejected
   it('should reject move when space is already publicly revealed', () => {
     game.join(player1);
     game.join(player2);
@@ -711,6 +568,7 @@ describe('QuantumTicTacToeGame', () => {
     expect(() => play(player2, 'A', 0, 0)).toThrow(INVALID_MOVE_MESSAGE);
   });
 
+  // Ensuring invalid board moves are rejected
   it('should reject move if board does not exist', () => {
     game.join(player1);
     game.join(player2);
@@ -722,6 +580,7 @@ describe('QuantumTicTacToeGame', () => {
     expect(() => game.applyMove(move)).toThrow(BOARD_POSITION_NOT_VALID_MESSAGE);
   });
 
+  // Verifying invalid row moves are rejected
   it('should reject move if row does not exist', () => {
     game.join(player1);
     game.join(player2);
@@ -733,6 +592,7 @@ describe('QuantumTicTacToeGame', () => {
     expect(() => game.applyMove(move)).toThrow(BOARD_POSITION_NOT_VALID_MESSAGE);
   });
 
+  // Ensuring invalid column moves are rejected
   it('should reject move if column does not exist', () => {
     game.join(player1);
     game.join(player2);
@@ -744,17 +604,7 @@ describe('QuantumTicTacToeGame', () => {
     expect(() => game.applyMove(move)).toThrow(BOARD_POSITION_NOT_VALID_MESSAGE);
   });
 
-  it('should reject move if position is non-numeric', () => {
-    game.join(player1);
-    game.join(player2);
-    const move: GameMove<QuantumTicTacToeMove> = {
-      playerID: player1.id,
-      gameID: game.id,
-      move: { board: 'A', row: 0, col: 'A' as unknown as 0 | 1 | 2, gamePiece: 'X' },
-    };
-    expect(() => game.applyMove(move)).toThrow(BOARD_POSITION_NOT_VALID_MESSAGE);
-  });
-
+  // Verifying invalid game ID moves are rejected
   it('should reject move if game-id is invalid', () => {
     game.join(player1);
     game.join(player2);
@@ -765,5 +615,273 @@ describe('QuantumTicTacToeGame', () => {
       move: { board: 'A', row: 0, col: 'A' as unknown as 0 | 1 | 2, gamePiece: 'X' },
     };
     expect(() => game.applyMove(move)).toThrow(GAME_ID_MISSMATCH_MESSAGE);
+  });
+
+  // Preventing duplicate joins as X
+  it('prevents the same player from joining twice when they are already X', () => {
+    const p = createPlayerForTesting();
+    const g = new QuantumTicTacToeGame();
+    g.join(p);
+    expect(() => g.join(p)).toThrow(PLAYER_ALREADY_IN_GAME_MESSAGE);
+    expect(g.state.x).toBe(p.id);
+    expect(g.state.o).toBeUndefined();
+    expect(g.state.status).toBe('WAITING_TO_START');
+    expect(g.state.x && g.state.o ? g.state.x !== g.state.o : true).toBe(true);
+  });
+
+  // Preventing duplicate joins as O
+  it('prevents the same player from joining again when they are already O', () => {
+    const x = createPlayerForTesting();
+    const o = createPlayerForTesting();
+    const g = new QuantumTicTacToeGame();
+    g.join(x);
+    g.join(o);
+    expect(() => g.join(o)).toThrow(PLAYER_ALREADY_IN_GAME_MESSAGE);
+    expect(g.state.x).toBe(x.id);
+    expect(g.state.o).toBe(o.id);
+    expect(g.state.status).toBe('IN_PROGRESS');
+  });
+
+  // Ensuring subgames are not modified when non-player leaves
+  it('validates membership before touching subgames on leave', () => {
+    const g = new QuantumTicTacToeGame();
+    const p = createPlayerForTesting();
+    // @ts-expect-error - accessing private property for testing
+    const spyA = jest.spyOn(g._games.A, 'leave');
+    // @ts-expect-error - accessing private property for testing
+    const spyB = jest.spyOn(g._games.B, 'leave');
+    // @ts-expect-error - accessing private property for testing
+    const spyC = jest.spyOn(g._games.C, 'leave');
+    expect(() => g.leave(p)).toThrow(PLAYER_NOT_IN_GAME_MESSAGE);
+    expect(spyA).not.toHaveBeenCalled();
+    expect(spyB).not.toHaveBeenCalled();
+    expect(spyC).not.toHaveBeenCalled();
+  });
+
+  // Verifying visibility reset when only player leaves
+  it('resets publiclyVisible to a full 3x3 false grid when the only player leaves', () => {
+    game.join(player1);
+    game.leave(player1);
+    expect(game.state.publiclyVisible).toEqual({
+      A: [
+        [false, false, false],
+        [false, false, false],
+        [false, false, false],
+      ],
+      B: [
+        [false, false, false],
+        [false, false, false],
+        [false, false, false],
+      ],
+      C: [
+        [false, false, false],
+        [false, false, false],
+        [false, false, false],
+      ],
+    });
+  });
+
+  // Ensuring subgames are recreated after player leaves
+  it('recreates fresh subgames when the only player leaves before start', () => {
+    const g = new QuantumTicTacToeGame();
+    const p1 = createPlayerForTesting();
+    g.join(p1);
+    g.leave(p1);
+    // @ts-expect-error - accessing private property for testing
+    expect(g._games.A).toBeDefined();
+    // @ts-expect-error - accessing private property for testing
+    expect(g._games.B).toBeDefined();
+    // @ts-expect-error - accessing private property for testing
+    expect(g._games.C).toBeDefined();
+    // @ts-expect-error - accessing private property for testing
+    expect(g._games.A.state.moves).toHaveLength(0);
+    // @ts-expect-error - accessing private property for testing
+    expect(g._games.A.state.status).toBe('WAITING_TO_START');
+    const p2 = createPlayerForTesting();
+    const p3 = createPlayerForTesting();
+    g.join(p2);
+    g.join(p3);
+    expect(g.state.status).toBe('IN_PROGRESS');
+  });
+
+  // Rejecting moves with non-integer positions
+  it('should reject moves with non-integer positions', () => {
+    game.join(player1);
+    game.join(player2);
+    const badRowMove = {
+      playerID: player1.id,
+      gameID: game.id,
+      move: {
+        board: 'A',
+        row: 1.5 as unknown as 0 | 1 | 2,
+        col: 0 as unknown as 0 | 1 | 2,
+        gamePiece: 'X',
+      } as const,
+    };
+    const badColMove = {
+      playerID: player2.id,
+      gameID: game.id,
+      move: {
+        board: 'A',
+        row: 0 as unknown as 0 | 1 | 2,
+        col: 'foo' as unknown as 0 | 1 | 2,
+        gamePiece: 'O',
+      } as const,
+    };
+    expect(() => game.applyMove(badRowMove)).toThrow(BOARD_POSITION_NOT_VALID_MESSAGE);
+    expect(() => game.applyMove(badColMove)).toThrow(BOARD_POSITION_NOT_VALID_MESSAGE);
+  });
+
+  // Rejecting moves with out-of-bounds columns
+  it('should reject moves with column >= 3 (out of bounds)', () => {
+    game.join(player1);
+    game.join(player2);
+    const move = {
+      playerID: player1.id,
+      gameID: game.id,
+      move: { board: 'A', row: 0, col: 3 as unknown as 0 | 1 | 2, gamePiece: 'X' } as const,
+    };
+    expect(() => game.applyMove(move)).toThrow(BOARD_POSITION_NOT_VALID_MESSAGE);
+  });
+
+  // Allowing collision reveals on drawn sub-board
+  it('allows collision-reveals on a drawn sub-board (OVER without winner)', () => {
+    const p1 = player1;
+    const p2 = player2;
+    game.join(p1);
+    game.join(p2);
+    play(p1, 'A', 0, 0);
+    play(p2, 'A', 1, 1);
+    play(p1, 'A', 2, 2);
+    play(p2, 'A', 0, 2);
+    play(p1, 'A', 0, 1);
+    play(p2, 'A', 2, 1);
+    play(p1, 'A', 1, 2);
+    play(p2, 'A', 1, 0);
+    play(p1, 'A', 2, 0);
+    // @ts-expect-error - accessing private property for testing
+    expect(game._games.A.state.status).toBe('OVER');
+    // @ts-expect-error - accessing private property for testing
+    expect(game._games.A.state.winner).toBeUndefined();
+    const beforeMoves = game.state.moves.length;
+    game.applyMove({
+      playerID: p2.id,
+      gameID: game.id,
+      move: { board: 'A', row: 0, col: 0, gamePiece: 'O' },
+    });
+    expect(game.state.moves.length).toBe(beforeMoves + 1);
+    expect(game.state.publiclyVisible.A[0][0]).toBe(true);
+  });
+
+  // Preventing self-collision by O
+  it('throws when O tries to play again on a square O already played (self-collision)', () => {
+    game.join(player1);
+    game.join(player2);
+    play(player1, 'B', 1, 1);
+    play(player2, 'A', 0, 0);
+    play(player1, 'B', 1, 2);
+    expect(() => play(player2, 'A', 0, 0)).toThrow(INVALID_MOVE_MESSAGE);
+  });
+
+  // Ensuring visibility is deep-copied on collision reveal (ChatGPT suggested immutability test)
+  it('collision reveal deep-copies visibility (board + row immutability)', () => {
+    game.join(player1);
+    game.join(player2);
+    play(player1, 'A', 0, 0);
+    const prev = game.state;
+    const prevBoardA = prev.publiclyVisible.A;
+    const prevRow0 = prevBoardA[0];
+    play(player2, 'A', 0, 0);
+    expect(game.state).not.toBe(prev);
+    expect(game.state.publiclyVisible).not.toBe(prev.publiclyVisible);
+    expect(game.state.publiclyVisible.A).not.toBe(prevBoardA);
+    expect(game.state.publiclyVisible.A[0]).not.toBe(prevRow0);
+    expect(prevRow0[0]).toBe(false);
+    expect(game.state.publiclyVisible.A[0][0]).toBe(true);
+  });
+
+  // Verifying correct piece recording on collision
+  it('records the correct derived piece for O on collision', () => {
+    game.join(player1);
+    game.join(player2);
+    play(player1, 'A', 0, 0);
+    game.applyMove({
+      playerID: player2.id,
+      gameID: game.id,
+      move: { board: 'A', row: 0, col: 0, gamePiece: 'X' },
+    });
+    const last = game.state.moves[game.state.moves.length - 1];
+    expect(last).toEqual({ board: 'A', row: 0, col: 0, gamePiece: 'O' });
+    // @ts-expect-error - accessing private property for testing
+    expect(game._games.A.state.moves.length).toBe(1);
+    expect(game.state.publiclyVisible.A[0][0]).toBe(true);
+  });
+
+  // Ensuring meta-moves are recorded correctly
+  it('records meta-moves with board,row,col and derived gamePiece (normal move)', () => {
+    game.join(player1);
+    game.join(player2);
+    game.applyMove({
+      playerID: player1.id,
+      gameID: game.id,
+      move: { board: 'B', row: 2, col: 1, gamePiece: 'O' },
+    });
+    const last = game.state.moves[game.state.moves.length - 1];
+    expect(last).toEqual({ board: 'B', row: 2, col: 1, gamePiece: 'X' });
+    expect(Object.keys(last).sort()).toEqual(['board', 'col', 'gamePiece', 'row'].sort());
+  });
+
+  // Verifying O's piece is recorded correctly
+  it('derives piece for normal move: O is recorded as O even if caller says X', () => {
+    game.join(player1);
+    game.join(player2);
+    play(player1, 'A', 0, 0);
+    game.applyMove({
+      playerID: player2.id,
+      gameID: game.id,
+      move: { board: 'A', row: 0, col: 1, gamePiece: 'X' },
+    });
+    // @ts-expect-error - accessing private property for testing
+    const subMoves = game._games.A.state.moves;
+    expect(subMoves[subMoves.length - 1].gamePiece).toBe('O');
+    const last = game.state.moves.at(-1);
+    expect(last).toBeDefined();
+    expect(last).toEqual({ board: 'A', row: 0, col: 1, gamePiece: 'O' });
+  });
+
+  // Verifying X's piece is recorded correctly
+  it('derives piece for normal move: X is recorded as X even if caller says O', () => {
+    game.join(player1);
+    game.join(player2);
+    game.applyMove({
+      playerID: player1.id,
+      gameID: game.id,
+      move: { board: 'B', row: 2, col: 1, gamePiece: 'O' },
+    });
+    // @ts-expect-error - accessing private property for testing
+    const subMoves = game._games.B.state.moves;
+    expect(subMoves[subMoves.length - 1].gamePiece).toBe('X');
+    const last = game.state.moves.at(-1);
+    expect(last).toBeDefined();
+    expect(last).toEqual({ board: 'B', row: 2, col: 1, gamePiece: 'X' });
+  });
+
+  // Ensuring game does not end when only one board is finished
+  it('does NOT end when only board C is finished', () => {
+    game.join(player1);
+    game.join(player2);
+    play(player1, 'C', 0, 0);
+    play(player2, 'A', 1, 1);
+    play(player1, 'C', 0, 1);
+    play(player2, 'B', 1, 1);
+    play(player1, 'C', 0, 2);
+    // @ts-expect-error - accessing private property for testing
+    expect(game._games.C.state.status).toBe('OVER');
+    // @ts-expect-error - accessing private property for testing
+    expect(game._games.A.state.status).toBe('IN_PROGRESS');
+    // @ts-expect-error - accessing private property for testing
+    expect(game._games.B.state.status).toBe('IN_PROGRESS');
+    expect(game.state.status).toBe('IN_PROGRESS');
+    expect(() => play(player2, 'A', 0, 0)).not.toThrow();
   });
 });

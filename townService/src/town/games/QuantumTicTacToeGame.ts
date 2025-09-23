@@ -18,11 +18,7 @@ import InvalidParametersError, {
   GAME_ID_MISSMATCH_MESSAGE,
 } from '../../lib/InvalidParametersError';
 
-/**
- * A QuantumTicTacToeGame is a Game that implements the rules of the Tic-Tac-Toe variant described at https://www.smbc-comics.com/comic/tic.
- * This class acts as a controller for three underlying TicTacToeGame instances, orchestrating the "quantum" rules by taking
- * the role of the monitor.
- */
+// Managing quantum tic-tac-toe game with three sub-games, implementing rules from https://www.smbc-comics.com/comic/tic (ChatGPT inspired rule reference clarity)
 export default class QuantumTicTacToeGame extends Game<
   QuantumTicTacToeGameState,
   QuantumTicTacToeMove
@@ -35,6 +31,7 @@ export default class QuantumTicTacToeGame extends Game<
 
   private _moveCount: number;
 
+  // Initializing game state and sub-games with default values
   public constructor() {
     super({
       status: 'WAITING_TO_START',
@@ -69,15 +66,7 @@ export default class QuantumTicTacToeGame extends Game<
     this._moveCount = 0;
   }
 
-  /**
-   * Attempts to join a player to the quantum tic-tac-toe game.
-   * The first player to join becomes X, the second becomes O.
-   * When both players have joined, the game status changes to IN_PROGRESS.
-   *
-   * @param player The player attempting to join the game
-   * @throws InvalidParametersError if the player is already in the game
-   * @throws InvalidParametersError if the game is full (2 players already)
-   */
+  // Adding player to game, assigning X or O and starting game when both join
   protected _join(player: Player): void {
     if (this.state.x === player.id || this.state.o === player.id) {
       throw new InvalidParametersError(PLAYER_ALREADY_IN_GAME_MESSAGE);
@@ -97,26 +86,18 @@ export default class QuantumTicTacToeGame extends Game<
     }
   }
 
-  /**
-   * Attempts to remove a player from the quantum tic-tac-toe game.
-   * If only one player is in the game, the game resets to WAITING_TO_START.
-   * If both players are in the game, the remaining player is declared the winner
-   * and the game status changes to OVER.
-   *
-   * @param player The player attempting to leave the game
-   * @throws InvalidParametersError if the player is not in the game
-   */
+  // Removing player from game, resetting or ending based on game state (ChatGPT suggested handling single-player reset case)
   protected _leave(player: Player): void {
     if (this.state.x !== player.id && this.state.o !== player.id) {
       throw new InvalidParametersError(PLAYER_NOT_IN_GAME_MESSAGE);
     }
 
-    // Leave all subgames
+    // Updating all sub-games to reflect player departure
     this._games.A.leave(player);
     this._games.B.leave(player);
     this._games.C.leave(player);
 
-    // Handles case where the game has not started yet
+    // Resetting game if only one player was present
     if (this.state.o === undefined) {
       this.state = {
         ...this.state,
@@ -125,7 +106,6 @@ export default class QuantumTicTacToeGame extends Game<
         moves: [],
         status: 'WAITING_TO_START',
         publiclyVisible: {
-          // fresh visibility
           A: [
             [false, false, false],
             [false, false, false],
@@ -155,6 +135,7 @@ export default class QuantumTicTacToeGame extends Game<
       this._moveCount = 0;
       return;
     }
+    // Declaring remaining player as winner if game was in progress
     if (this.state.x === player.id) {
       this.state = {
         ...this.state,
@@ -170,30 +151,29 @@ export default class QuantumTicTacToeGame extends Game<
     }
   }
 
-  /**
-   * Checks that the given move is "valid": that the it's the right
-   * player's turn, that the game is actually in-progress, etc.
-   * @see TicTacToeGame#_validateMove
-   */
+  // Validating move for correct player, game state, and board position
   private _validateMove(move: GameMove<QuantumTicTacToeMove>): void {
-    // Player must be in the game
+    // Ensuring player is part of the game
     if (move.playerID !== this.state.x && move.playerID !== this.state.o) {
       throw new InvalidParametersError(PLAYER_NOT_IN_GAME_MESSAGE);
     }
 
+    // Verifying game ID matches
     if (move.gameID !== this.id) {
       throw new InvalidParametersError(GAME_ID_MISSMATCH_MESSAGE);
     }
 
+    // Checking game is not over
     if (this.state.status === 'OVER') {
       throw new InvalidParametersError(GAME_OVER_MESSAGE);
     }
 
-    // Meta-game must be in progress or waiting to start (with both players)
+    // Ensuring game is in progress
     if (this.state.status !== 'IN_PROGRESS') {
       throw new InvalidParametersError(GAME_NOT_IN_PROGRESS_MESSAGE);
     }
 
+    // Validating board and position integrity
     const { board, row, col } = move.move;
     const validBoard = board === 'A' || board === 'B' || board === 'C';
     const ints = Number.isInteger(row) && Number.isInteger(col);
@@ -202,30 +182,31 @@ export default class QuantumTicTacToeGame extends Game<
       throw new InvalidParametersError(BOARD_POSITION_NOT_VALID_MESSAGE);
     }
 
-    // Board must not be closed/scored already
+    // Preventing moves on won boards
     const subGame = this._games[board];
     if (subGame.state.status === 'OVER' && subGame.state.winner) {
-      // This board was won by someone - can't play here anymore
       throw new InvalidParametersError(INVALID_MOVE_MESSAGE);
     }
 
+    // Blocking moves on revealed squares
     if (this.state.publiclyVisible[board][row][col]) {
       throw new InvalidParametersError(INVALID_MOVE_MESSAGE);
     }
 
-    // Global turn order via _moveCount
+    // Enforcing turn order based on move count (ChatGPT suggested explicit turn validation)
     const expectedID = this._moveCount % 2 === 0 ? this.state.x : this.state.o;
     if (move.playerID !== expectedID) {
       throw new InvalidParametersError(MOVE_NOT_YOUR_TURN_MESSAGE);
     }
   }
 
+  // Applying move, handling collisions and routing to sub-games
   public applyMove(move: GameMove<QuantumTicTacToeMove>): void {
     this._validateMove(move);
 
     const { board, row, col } = move.move;
 
-    // 1) Collision: check if this square on this board was already played before
+    // Checking for collision with previous move
     let previousMove;
     for (const m of this.state.moves) {
       if (m.board === board && m.row === row && m.col === col) {
@@ -234,13 +215,14 @@ export default class QuantumTicTacToeGame extends Game<
       }
     }
 
+    // Handling collision case
     if (previousMove) {
-      // Check if the same player is trying to play on a square they already played
       const currentPlayerPiece = move.playerID === this.state.x ? 'X' : 'O';
+      // Preventing self-collision
       if (previousMove.gamePiece === currentPlayerPiece) {
         throw new InvalidParametersError(INVALID_MOVE_MESSAGE);
       } else {
-        // Reveal that square publicly, do NOT touch subgame
+        // Revealing square and updating move count
         const pvBoard = this.state.publiclyVisible[board].map(r => r.slice());
         pvBoard[row][col] = true;
         this.state = {
@@ -250,55 +232,44 @@ export default class QuantumTicTacToeGame extends Game<
             [board]: pvBoard,
           } as const,
         };
-        this._moveCount += 1; // lose turn
+        this._moveCount += 1;
         const gamePiece: 'X' | 'O' = move.playerID === this.state.x ? 'X' : 'O';
         this.state = {
           ...this.state,
-          moves: [
-            ...this.state.moves,
-            { board, row, col, gamePiece }, // <-- IMPORTANT: store derived piece
-          ],
+          moves: [...this.state.moves, { board, row, col, gamePiece }],
         };
         return;
       }
     }
 
-    // 2) Normal move: route to subgame (bypass per-board turn check)
+    // Routing normal move to sub-game
     const sub = this._games[board];
     const gamePiece: 'X' | 'O' = move.playerID === this.state.x ? 'X' : 'O';
-
-    // If your TicTacToeGame has this helper, use it. (Your code already calls it.)
     sub.applyMoveWithoutTurnValidation({
       playerID: move.playerID,
       gameID: move.gameID,
       move: { gamePiece, row, col },
     });
 
-    // push a normalized move that uses the derived piece
+    // Recording move with derived piece (ChatGPT emphasized importance of derived piece)
     this.state = {
       ...this.state,
-      moves: [
-        ...this.state.moves,
-        { board, row, col, gamePiece }, // <-- IMPORTANT: store derived piece
-      ],
+      moves: [...this.state.moves, { board, row, col, gamePiece }],
     };
 
     this._moveCount += 1;
 
-    // 4) Score newly-finished boards and check end-of-game
+    // Updating scores and checking game end
     this._checkForWins();
     this._checkForGameEnding();
   }
 
-  /**
-   * Checks all three sub-games for any new three-in-a-row conditions.
-   * Awards points and marks boards as "won" so they can't be played on.
-   */
+  // Updating scores based on sub-game wins
   private _checkForWins(): void {
-    // Count how many boards each player should have won
     let expectedXScore = 0;
     let expectedOScore = 0;
 
+    // Checking each sub-game for wins
     (['A', 'B', 'C'] as const).forEach(boardKey => {
       const sub = this._games[boardKey];
       if (sub.state.status === 'OVER' && sub.state.winner) {
@@ -307,7 +278,7 @@ export default class QuantumTicTacToeGame extends Game<
       }
     });
 
-    // Only update if our scores are behind what they should be
+    // Updating scores only if changed
     if (this._xScore !== expectedXScore || this._oScore !== expectedOScore) {
       this._xScore = expectedXScore;
       this._oScore = expectedOScore;
@@ -315,26 +286,23 @@ export default class QuantumTicTacToeGame extends Game<
     }
   }
 
-  /**
-   * A Quantum Tic-Tac-Toe game ends when no more moves are possible.
-   * This happens when all squares on all boards are either occupied or part of a won board.
-   */
+  // Determining if game should end based on board states
   private _checkForGameEnding(): void {
-    // Only end when all three boards are finished (won or drawn)
+    // Checking if all boards are finished
     const allBoardsFinished =
       this._games.A.state.status === 'OVER' &&
       this._games.B.state.status === 'OVER' &&
       this._games.C.state.status === 'OVER';
 
     if (!allBoardsFinished) {
-      return; // Game should continue
+      return;
     }
 
-    // All boards are finished, determine the winner
+    // Setting winner based on scores
     let winner: string | undefined;
     if (this._xScore > this._oScore) winner = this.state.x;
     else if (this._oScore > this._xScore) winner = this.state.o;
-    else winner = undefined; // tie
+    else winner = undefined;
 
     this.state = { ...this.state, status: 'OVER', winner };
   }
