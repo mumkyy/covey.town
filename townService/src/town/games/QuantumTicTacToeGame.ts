@@ -36,10 +36,6 @@ export default class QuantumTicTacToeGame extends Game<
 
   private _moveCount: number;
 
-  private _scored: { A: boolean; B: boolean; C: boolean };
-
-  private _next: 'X' | 'O';
-
   public constructor() {
     super({
       status: 'WAITING_TO_START',
@@ -72,8 +68,6 @@ export default class QuantumTicTacToeGame extends Game<
     this._xScore = 0;
     this._oScore = 0;
     this._moveCount = 0;
-    this._scored = { A: false, B: false, C: false };
-    this._next = 'X';
   }
 
   /**
@@ -100,7 +94,6 @@ export default class QuantumTicTacToeGame extends Game<
       this._games.B.join(player);
       this._games.C.join(player);
       this.state.status = 'IN_PROGRESS';
-      this._next = 'X';
     } else {
       throw new InvalidParametersError(GAME_FULL_MESSAGE);
     }
@@ -156,8 +149,7 @@ export default class QuantumTicTacToeGame extends Game<
       };
       this._xScore = 0;
       this._oScore = 0;
-      this._scored = { A: false, B: false, C: false };
-      this._next = 'X';
+      this._moveCount = 0;
       return;
     }
     if (this.state.x === player.id) {
@@ -200,12 +192,6 @@ export default class QuantumTicTacToeGame extends Game<
     }
 
     const { board, row, col } = move.move;
-    // Board must not be closed/scored already
-    if (this._scored[move.move.board]) {
-      // Treat closed board like "can't play here anymore"
-      throw new InvalidParametersError(INVALID_MOVE_MESSAGE);
-    }
-
     const validBoard = board === 'A' || board === 'B' || board === 'C';
     const ints = Number.isInteger(row) && Number.isInteger(col);
     const inBounds = row >= 0 && row < 3 && col >= 0 && col < 3;
@@ -213,12 +199,19 @@ export default class QuantumTicTacToeGame extends Game<
       throw new InvalidParametersError(BOARD_POSITION_NOT_VALID_MESSAGE);
     }
 
+    // Board must not be closed/scored already
+    const subGame = this._games[board];
+    if (subGame.state.status === 'OVER' && subGame.state.winner) {
+      // This board was won by someone - can't play here anymore
+      throw new InvalidParametersError(INVALID_MOVE_MESSAGE);
+    }
+
     if (this.state.publiclyVisible[board][row][col]) {
       throw new InvalidParametersError(BOARD_POSITION_NOT_EMPTY_MESSAGE);
     }
 
-    // Global turn order via _next
-    const expectedID = this._next === 'X' ? this.state.x : this.state.o;
+    // Global turn order via _moveCount
+    const expectedID = this._moveCount % 2 === 0 ? this.state.x : this.state.o;
     if (move.playerID !== expectedID) {
       throw new InvalidParametersError(MOVE_NOT_YOUR_TURN_MESSAGE);
     }
@@ -229,20 +222,19 @@ export default class QuantumTicTacToeGame extends Game<
 
     const { board, row, col } = move.move;
 
-    // 1) Collision: if this square on this board was already played before
-    const alreadyPlayed = this.state.moves.some(
-      m => m.board === board && m.row === row && m.col === col,
-    );
-    if (alreadyPlayed) {
+    // 1) Collision: check if this square on this board was already played before
+    let previousMove;
+    for (const m of this.state.moves) {
+      if (m.board === board && m.row === row && m.col === col) {
+        previousMove = m;
+        break;
+      }
+    }
+
+    if (previousMove) {
       // Check if the same player is trying to play on a square they already played
-      const previousMove = this.state.moves.find(
-        m => m.board === board && m.row === row && m.col === col,
-      );
-      if (
-        previousMove &&
-        ((previousMove.gamePiece === 'X' && move.playerID === this.state.x) ||
-          (previousMove.gamePiece === 'O' && move.playerID === this.state.o))
-      ) {
+      const currentPlayerPiece = move.playerID === this.state.x ? 'X' : 'O';
+      if (previousMove.gamePiece === currentPlayerPiece) {
         throw new InvalidParametersError(INVALID_MOVE_MESSAGE);
       } else {
         // Reveal that square publicly, do NOT add a move, do NOT touch subgame
@@ -255,7 +247,7 @@ export default class QuantumTicTacToeGame extends Game<
             [board]: pvBoard,
           } as const,
         };
-        this._next = this._next === 'X' ? 'O' : 'X'; // lose turn
+        this._moveCount += 1; // lose turn
         return;
       }
     }
@@ -280,7 +272,7 @@ export default class QuantumTicTacToeGame extends Game<
       ],
     };
 
-    this._next = this._next === 'X' ? 'O' : 'X';
+    this._moveCount += 1;
 
     // 4) Score newly-finished boards and check end-of-game
     this._checkForWins();
@@ -292,18 +284,24 @@ export default class QuantumTicTacToeGame extends Game<
    * Awards points and marks boards as "won" so they can't be played on.
    */
   private _checkForWins(): void {
+    // Count how many boards each player should have won
+    let expectedXScore = 0;
+    let expectedOScore = 0;
+
     (['A', 'B', 'C'] as const).forEach(boardKey => {
       const sub = this._games[boardKey];
-      if (this._scored[boardKey]) return;
-      if (sub.state.status !== 'OVER') return;
-
-      this._scored[boardKey] = true; // mark closed for win OR draw
-      if (sub.state.winner) {
-        if (sub.state.winner === this.state.x) this._xScore += 1;
-        else if (sub.state.winner === this.state.o) this._oScore += 1;
-        this.state = { ...this.state, xScore: this._xScore, oScore: this._oScore };
+      if (sub.state.status === 'OVER' && sub.state.winner) {
+        if (sub.state.winner === this.state.x) expectedXScore += 1;
+        else if (sub.state.winner === this.state.o) expectedOScore += 1;
       }
     });
+
+    // Only update if our scores are behind what they should be
+    if (this._xScore !== expectedXScore || this._oScore !== expectedOScore) {
+      this._xScore = expectedXScore;
+      this._oScore = expectedOScore;
+      this.state = { ...this.state, xScore: this._xScore, oScore: this._oScore };
+    }
   }
 
   /**
@@ -311,14 +309,22 @@ export default class QuantumTicTacToeGame extends Game<
    * This happens when all squares on all boards are either occupied or part of a won board.
    */
   private _checkForGameEnding(): void {
-    // Only end when all three boards are scored
-    if (this._scored.A && this._scored.B && this._scored.C) {
-      let winner: string | undefined;
-      if (this._xScore > this._oScore) winner = this.state.x;
-      else if (this._oScore > this._xScore) winner = this.state.o;
-      else winner = undefined;
+    // Only end when all three boards are finished (won or drawn)
+    const allBoardsFinished =
+      this._games.A.state.status === 'OVER' &&
+      this._games.B.state.status === 'OVER' &&
+      this._games.C.state.status === 'OVER';
 
-      this.state = { ...this.state, status: 'OVER', winner };
+    if (!allBoardsFinished) {
+      return; // Game should continue
     }
+
+    // All boards are finished, determine the winner
+    let winner: string | undefined;
+    if (this._xScore > this._oScore) winner = this.state.x;
+    else if (this._oScore > this._xScore) winner = this.state.o;
+    else winner = undefined; // tie
+
+    this.state = { ...this.state, status: 'OVER', winner };
   }
 }
