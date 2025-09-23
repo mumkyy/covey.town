@@ -9,7 +9,6 @@ import Player from '../../lib/Player';
 import InvalidParametersError, {
   GAME_FULL_MESSAGE,
   GAME_NOT_IN_PROGRESS_MESSAGE,
-  BOARD_POSITION_NOT_EMPTY_MESSAGE,
   MOVE_NOT_YOUR_TURN_MESSAGE,
   PLAYER_ALREADY_IN_GAME_MESSAGE,
   PLAYER_NOT_IN_GAME_MESSAGE,
@@ -93,7 +92,6 @@ export default class QuantumTicTacToeGame extends Game<
       this._games.A.join(player);
       this._games.B.join(player);
       this._games.C.join(player);
-      this.state.status = 'IN_PROGRESS';
     } else {
       throw new InvalidParametersError(GAME_FULL_MESSAGE);
     }
@@ -146,6 +144,11 @@ export default class QuantumTicTacToeGame extends Game<
         },
         xScore: 0,
         oScore: 0,
+      };
+      this._games = {
+        A: new TicTacToeGame(),
+        B: new TicTacToeGame(),
+        C: new TicTacToeGame(),
       };
       this._xScore = 0;
       this._oScore = 0;
@@ -207,7 +210,7 @@ export default class QuantumTicTacToeGame extends Game<
     }
 
     if (this.state.publiclyVisible[board][row][col]) {
-      throw new InvalidParametersError(BOARD_POSITION_NOT_EMPTY_MESSAGE);
+      throw new InvalidParametersError(INVALID_MOVE_MESSAGE);
     }
 
     // Global turn order via _moveCount
@@ -237,7 +240,7 @@ export default class QuantumTicTacToeGame extends Game<
       if (previousMove.gamePiece === currentPlayerPiece) {
         throw new InvalidParametersError(INVALID_MOVE_MESSAGE);
       } else {
-        // Reveal that square publicly, do NOT add a move, do NOT touch subgame
+        // Reveal that square publicly, do NOT touch subgame
         const pvBoard = this.state.publiclyVisible[board].map(r => r.slice());
         pvBoard[row][col] = true;
         this.state = {
@@ -248,6 +251,14 @@ export default class QuantumTicTacToeGame extends Game<
           } as const,
         };
         this._moveCount += 1; // lose turn
+        const gamePiece: 'X' | 'O' = move.playerID === this.state.x ? 'X' : 'O';
+        this.state = {
+          ...this.state,
+          moves: [
+            ...this.state.moves,
+            { board, row, col, gamePiece }, // <-- IMPORTANT: store derived piece
+          ],
+        };
         return;
       }
     }

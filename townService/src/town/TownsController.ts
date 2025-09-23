@@ -18,7 +18,7 @@ import {
 import { Town, TownCreateParams, TownCreateResponse } from '../api/Model';
 import InvalidParametersError from '../lib/InvalidParametersError';
 import CoveyTownsStore from '../lib/TownsStore';
-import {
+import type {
   ChatMessage,
   ConversationArea,
   CoveyTownSocket,

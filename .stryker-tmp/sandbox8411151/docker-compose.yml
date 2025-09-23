@@ -1,0 +1,23 @@
+version: "3.9"
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.townService
+    ports:
+      - "8081:80" # host 8081 -> container 80
+    env_file:
+      - townService/.env
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:80" # host 3000 -> container 80
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_TOWNS_SERVICE_URL: "http://localhost:8081"
+      NEXT_PUBLIC_TOWN_DEV_MODE: "true"
+    depends_on:
+      - backend
